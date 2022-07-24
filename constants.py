@@ -1,6 +1,9 @@
 lowercase_vowels_with_tones = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
 uppercase_vowels_with_tones = "ĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ"
 vowels_with_tones = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ"
+vowels_without_tones = "aeiouüAEIOUÜ"
+
+#  NOTE: add apostrophe before a, e, and o. http://pinyin.info/romanization/hanyu/apostrophes.html
 
 initials = ["b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "zh", "ch", "sh", "r", "z", "c", "s"]
 finals = [
