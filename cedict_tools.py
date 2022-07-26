@@ -1,37 +1,15 @@
 '''resources
 https://en.wikibooks.org/wiki/Chinese_(Mandarin)/Table_of_Initial-Final_Combinations
-
-
-
 '''
 
-tests = [
-    "bāba",
-    "bā ba",
-    "ni3",
-    "fēng",
-    "fēng1",
-    "Tiān​'ān​mén",
-    "Tiān'ānmén",
-    "feng1 li4",
-    "fēng​lì",
-    "fēngjì",
-    "gàng",
-    "ma",
-    "!ma",
-    "ma-",
-    "ma ",
-    "xmnma ",
-    "hello",
-    "shuangr",
-    "shuangr3",
-    "shuangr9",
-    "āiya!",
-    "'ān​mén",
-    "'ānmén",
-    "ān​mén",
-    "ānmén"
-]
+# OVERALL GOAL
+# Wordlist to Anki deck
+# Convert a wordlist (say, HSK) to a csv containing:
+#   simplified/traditional, accented pinyin, CEDICT definition
+#   (optionally name of wordlist and some kind of index)
+
+# Secondary goals
+#   validate and manipulate pinyin strings between accented and unaccented
 
 
 # just load the whole dictionary to memory
@@ -61,6 +39,75 @@ with open(location, "rt") as cedict_file:
             if simp not in cedict:
                 cedict[simp] = entry
 
+
+# wordlist to bsv scratchpad - values separated by |
+cases = """倒
+安靜
+安排
+爸爸""".split()
+
+for c in cases:
+    trad, simp, pinyin, definition = cedict[c]
+    if trad != simp:
+        print(f"{simp} ({trad})|{pinyin}|{definition}")
+    else:
+        print(f"{trad}|{pinyin}|{definition}")
+
+""" # restore if accent_pinyin_syllables() fixed
+    if trad != simp:
+        print(f"{simp} ({trad})|{accent_pinyin_syllables(pinyin)}|{definition}")
+    else:
+        print(f"{trad}|{accent_pinyin_syllables(pinyin)}|{definition}")
+"""
+
+
+# Pinyin validation and manipulation
+
+tests = [
+    # VALID
+    "bā",  # simple accented syllable
+    "nǚ",  # with umlaut
+    "fēngjì",  # two accented syllables without space
+    "ma",  # unaccented (fifth tone accented pinyin)
+    "bāba",  # accented and unaccented compound syllables
+    "bā ba",  # with space
+    "ni3",  # simple numbered syllable
+    "feng1 li4",  # two numbered syllables with space
+    "feng1li4",  # two numbered syllables without space
+    "Ni3",  # initial cap
+    "Bā",  # initial cap accented
+    "Ma",  # initial cap unaccented
+    "Tiān'ānmén",  # with apostrophe before vowel, initial capital
+    "fēng​lì",  # two accented syllables with zero width space
+    "Tiān​'ān​mén",  # zero width space then apostrophe
+    "āiya!",  # accented compound with trailing legit punctuation
+    "Āiya!",  # accented compound with trailing legit punctuation
+    "NǙ",  # all caps
+    "shuangr",  # erhua
+    "shuangr3",  # numbered erhua and longest possible valid pinyin syllable
+    "shuang3 r5",  # mdbg style numbered erhua
+
+    # INVALID
+    "fēng1",  # both accented and numbered INVALID
+    "xmnma ",  # leading junk characters
+    "Tiān'​ān​mén",  # zero width space AFTER apostrophe
+    "hello",  # english word that coincidentally starts with valid pinyin chr
+    "!ma",  # leading junk punctuation
+    "ma-",  # trailing junk punctuation
+    "ma ",  # trailing space
+    " ma",  # leading space
+    "​mén",  # leading zero width space
+    " ma ",  # leading and trailing space
+    "shuang9",  # bad number
+    "shuang0",  # bad number 0
+    "shuangr9",  # bad number erhua
+    "shuangr0",  # bad number 0 erhua
+    "ma13",  # additional digit unexpectedly follows legitimate pinyin number
+    "'ānmén",  # starting with apostrophe (mostly invalid, mid-processing ok?)
+    "nǙ",  # weird caps
+]
+
+
 valid_pinyin_syllables = [
     "a", "ai", "an", "ang", "ao", "ba", "bai", "ban", "bang", "bao", "bei",
     "ben", "beng", "bi", "bian", "biao", "bie", "bin", "bing", "bo", "bu",
@@ -72,47 +119,48 @@ valid_pinyin_syllables = [
     "die", "ding", "diu", "dong", "dou", "du", "duan", "dui", "dun", "duo",
     "e", "ei", "en", "eng", "er", "fa", "fan", "fang", "fei", "fen", "feng",
     "fo", "fou", "fu", "ga", "gai", "gan", "gang", "gao", "ge", "gei", "gen",
-    "geng", "gong", "gou", "gu", "gua", "guai", "guan", "guang", "gui",
-    "gun", "guo", "ha", "hai", "han", "hang", "hao", "he", "hei", "hen",
-    "heng", "hong", "hou", "hu", "hua", "huai", "huan", "huang", "hui",
-    "hun", "huo", "ji", "jia", "jian", "jiang", "jiao", "jie", "jin", "jing",
-    "jiong", "jiu", "ju", "juan", "jue", "jun", "ka", "kai", "kan", "kang",
-    "kao", "ke", "ken", "keng", "kong", "kou", "ku", "kua", "kuai", "kuan",
-    "kuang", "kui", "kun", "kuo", "la", "lai", "lan", "lang", "lao", "le",
-    "lei", "leng", "li", "lia", "lian", "liang", "liao", "lie", "lin",
-    "ling", "liu", "lo", "long", "lou", "lu", "luan", "lun", "luo", "lü",
-    "lüe", "ma", "mai", "man", "mang", "mao", "me", "mei", "men", "meng",
-    "mi", "mian", "miao", "mie", "min", "ming", "miu", "mo", "mou", "mu",
-    "na", "nai", "nan", "nang", "nao", "ne", "nei", "nen", "neng", "ni",
-    "nian", "niang", "niao", "nie", "nin", "ning", "niu", "nong", "nou",
-    "nu", "nuan", "nun", "nuo", "nü", "nüe", "o", "ou", "pa", "pai", "pan",
-    "pang", "pao", "pei", "pen", "peng", "pi", "pian", "piao", "pie", "pin",
-    "ping", "po", "pou", "pu", "qi", "qia", "qian", "qiang", "qiao", "qie",
-    "qin", "qing", "qiong", "qiu", "qu", "quan", "que", "qun", "ran", "rang",
-    "rao", "re", "ren", "reng", "ri", "rong", "rou", "ru", "ruan", "rui",
-    "run", "ruo", "sa", "sai", "san", "sang", "sao", "se", "sen", "seng",
-    "sha", "shai", "shan", "shang", "shao", "she", "shen", "sheng", "shi",
-    "shou", "shu", "shua", "shuai", "shuan", "shuang", "shui", "shun",
-    "shuo", "si", "song", "sou", "su", "suan", "sui", "sun", "suo", "ta",
-    "tai", "tan", "tang", "tao", "te", "teng", "ti", "tian", "tiao", "tie",
-    "ting", "tong", "tou", "tu", "tuan", "tui", "tun", "tuo", "wa", "wai",
-    "wan", "wang", "wei", "wen", "weng", "wo", "wu", "xi", "xia", "xian",
-    "xiang", "xiao", "xie", "xin", "xing", "xiong", "xiu", "xu", "xuan",
-    "xue", "xun", "ya", "yan", "yang", "yao", "ye", "yi", "yin", "ying",
-    "yo", "yong", "you", "yu", "yuan", "yue", "yun", "za", "zai", "zan",
-    "zang", "zao", "ze", "zei", "zen", "zeng", "zha", "zhai", "zhan",
+    "geng", "gong", "gou", "gu", "gua", "guai", "guan", "guang", "gui", "gun",
+    "guo", "ha", "hai", "han", "hang", "hao", "he", "hei", "hen", "heng",
+    "hong", "hou", "hu", "hua", "huai", "huan", "huang", "hui", "hun", "huo",
+    "ji", "jia", "jian", "jiang", "jiao", "jie", "jin", "jing", "jiong", "jiu",
+    "ju", "juan", "jue", "jun", "ka", "kai", "kan", "kang", "kao", "ke", "ken",
+    "keng", "kong", "kou", "ku", "kua", "kuai", "kuan", "kuang", "kui", "kun",
+    "kuo", "la", "lai", "lan", "lang", "lao", "le", "lei", "leng", "li", "lia",
+    "lian", "liang", "liao", "lie", "lin", "ling", "liu", "lo", "long", "lou",
+    "lu", "luan", "lun", "luo", "lü", "lüe", "ma", "mai", "man", "mang", "mao",
+    "me", "mei", "men", "meng", "mi", "mian", "miao", "mie", "min", "ming",
+    "miu", "mo", "mou", "mu", "na", "nai", "nan", "nang", "nao", "ne", "nei",
+    "nen", "neng", "ni", "nian", "niang", "niao", "nie", "nin", "ning", "niu",
+    "nong", "nou", "nu", "nuan", "nun", "nuo", "nü", "nüe", "o", "ou", "pa",
+    "pai", "pan", "pang", "pao", "pei", "pen", "peng", "pi", "pian", "piao",
+    "pie", "pin", "ping", "po", "pou", "pu", "qi", "qia", "qian", "qiang",
+    "qiao", "qie", "qin", "qing", "qiong", "qiu", "qu", "quan", "que", "qun",
+    "ran", "rang", "rao", "re", "ren", "reng", "ri", "rong", "rou", "ru",
+    "ruan", "rui", "run", "ruo", "sa", "sai", "san", "sang", "sao", "se",
+    "sen", "seng", "sha", "shai", "shan", "shang", "shao", "she", "shen",
+    "sheng", "shi", "shou", "shu", "shua", "shuai", "shuan", "shuang", "shui",
+    "shun", "shuo", "si", "song", "sou", "su", "suan", "sui", "sun", "suo",
+    "ta", "tai", "tan", "tang", "tao", "te", "teng", "ti", "tian", "tiao",
+    "tie", "ting", "tong", "tou", "tu", "tuan", "tui", "tun", "tuo", "wa",
+    "wai", "wan", "wang", "wei", "wen", "weng", "wo", "wu", "xi", "xia",
+    "xian", "xiang", "xiao", "xie", "xin", "xing", "xiong", "xiu", "xu",
+    "xuan", "xue", "xun", "ya", "yan", "yang", "yao", "ye", "yi", "yin",
+    "ying", "yo", "yong", "you", "yu", "yuan", "yue", "yun", "za", "zai",
+    "zan", "zang", "zao", "ze", "zei", "zen", "zeng", "zha", "zhai", "zhan",
     "zhang", "zhao", "zhe", "zhei", "zhen", "zheng", "zhi", "zhong", "zhou",
     "zhu", "zhua", "zhuai", "zhuan", "zhuang", "zhui", "zhun", "zhuo", "zi",
-    "zong", "zou", "zu", "zuan", "zui", "zun", "zuo"
+    "zong", "zou", "zu", "zuan", "zui", "zun", "zuo", "r"
 ]
+# r not always considered valid pinyin but "r5" often used in cedict for erhua
 
 vowels_with_tones = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
+tones_upper = "ĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ"
 
 initials = [
-    "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x",
-    "zh", "ch", "sh", "r", "z", "c", "s", "y"
-    # y is not a traditional initial but helpful for text processing b/c
-    # it is used in place of i at the beginning of syllables
+    "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "zh",
+    "ch", "sh", "r", "z", "c", "s", "y"
+    # y is not a traditional initial but helpful for text processing b/c it is
+    # used in place of i at the beginning of syllables
     ]
 
 finals = [
@@ -128,35 +176,162 @@ finals = [
 ]
 
 
-def normalize_pinyin(accented_string, trim=False, leave_numbers=False):
-    """Removes accents and reduces to lowercase, converts v to ü
-
-    If trim set True, discards all nonstandard characters
-    TODO: Optionally leave an initial capital alone
+def is_valid_numbered_pinyin_syllable(syl, allow_erhua=True):
     """
-    outstr = ""
-    for l in accented_string.lower():
-        if l in "āáǎà":
-            outstr += "a"
-        elif l in "ēéěè":
-            outstr += "e"
-        elif l in "īíǐì":
-            outstr += "i"
-        elif l in "ōóǒò":
-            outstr += "o"
-        elif l in "ūúǔù":
-            outstr += "u"
-        elif l in "ǖǘǚǜv":
-            outstr += "ü"
-        elif trim:
-            test_str = "'" + "".join(initials) + "".join(finals)
-            if leave_numbers:
-                test_str += "012345"
-            if l in test_str:
-                outstr += l
-        else:
-            outstr += l
-    return outstr
+    Determines if syl is a valid numbered pinyin syllable
+    """
+    valid = False
+    if (syl[:-1].lower() in valid_pinyin_syllables) and (
+            syl[-1] in "12345"):
+        valid = True
+    if allow_erhua:
+        if (syl[:-2].lower() in valid_pinyin_syllables) and (
+                syl[-2].lower() == "r" and syl[-1] in "12345"):
+            valid = True
+    return valid
+
+
+def last_vowel_idx(syl):
+    for idx in range(len(syl)-1, -1, -1):
+        if syl[idx] in "aeiouü":
+            return idx
+    return None
+
+
+def is_valid_toneless_pinyin_syllable(syl, allow_erhua=True):
+    if allow_erhua and syl[-1] == "r":
+        stripped_syl = syl[:-1]
+    else:
+        stripped_syl = syl
+    numbered_syl = stripped_syl + "1"
+    return is_valid_numbered_pinyin_syllable(numbered_syl)
+
+
+def is_valid_accented_pinyin_syllable(syl, allow_erhua=True):
+    """
+    Determines whether syl is a valid accented pinyin syllable
+    """
+    # lowercase
+    test_syl = syl.lower()
+    # remove accent
+    accented_letters = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
+    unaccent = dict(zip(accented_letters, "aaaaeeeeiiiioooouuuuüüüü"))
+
+    tone_idx = None
+    accented_letter = None
+    for idx, l in enumerate(test_syl):
+        if l in accented_letters:
+            tone_idx = idx
+            accented_letter = l
+            break
+    if accented_letter is not None:
+        test_syl = test_syl.replace(accented_letter,
+                                    unaccent[accented_letter],
+                                    1)
+
+    # check valid syllable
+    letters_valid = is_valid_toneless_pinyin_syllable(test_syl, allow_erhua)
+
+    # check accent on right letter, if exists
+    # tone on a, e, o in ou, then final vowel
+    if "a" in test_syl:
+        proper_tone_idx = test_syl.find("a")
+    elif "e" in test_syl:
+        proper_tone_idx = test_syl.find("e")
+    elif "ou" in test_syl:
+        proper_tone_idx = test_syl.find("o")
+    else:
+        proper_tone_idx = last_vowel_idx(test_syl)
+
+    tone_valid = (tone_idx is None) or (tone_idx == proper_tone_idx)
+
+    return letters_valid and tone_valid
+
+
+def is_valid_pinyin_syllable(syl):
+    return (is_valid_accented_pinyin_syllable(syl)
+            or is_valid_numbered_pinyin_syllable(syl))
+
+
+def first_pinyin_syllable_length(pinyin_string):
+    """
+    Identifies the length of the first complete pinyin syllable
+
+    Returns None if issues.
+    shuangr3 longest?
+    """
+    longest_possible = min(8, len(pinyin_string))
+    for idx in range(longest_possible, 0, -1):
+        if is_valid_pinyin_syllable(pinyin_string[:idx]):
+            return idx
+    return None
+
+
+test_function = first_pinyin_syllable_length
+print(f"Testing {test_function.__name__}()")
+for t in tests:
+    print(f"{t}: {test_function(t)}")
+exit()
+# inf if short syl
+# shuangr3
+
+
+"""
+MODEL TO IMPLEMENT:
+
+def strip_pinyin() # remove tone, simplify, lowercase -- implemented below?
+
+def proper_tone_idx(syl):
+    test_syl = strip_pinyin(syl)
+    if "a" in test_syl:
+        proper_tone_idx = test_syl.find("a")
+    elif "e" in test_syl:
+        proper_tone_idx = test_syl.find("e")
+    elif "ou" in test_syl:
+        proper_tone_idx = test_syl.find("o")
+    else:
+        proper_tone_idx = last_vowel_idx(test_syl)
+    return proper_tone_idx
+
+
+def number_to_accent_syl(syl):
+    retval = None
+    if is_valid_numbered_pinyin_syllable(syl):
+        tone = syl[-1]
+        proper_tone_idx(syl)
+        tone_letter = syl[proper_tone_idx]
+
+
+def accent_to_number_syl(syl):
+  pass
+
+
+is_valid_numbered_pinyin_string
+# should we ignore whitespace, punctuation, caps?
+# implement strict first
+is_valid_accented_pinyin_string
+is_valid_pinyin_string
+
+
+split_pinyin_syllables
+# split out nonpinyin letters into separate clusters?
+# strip them?
+# fail early
+combine_pinyin_syllables
+# add apostrophes appropriately
+
+string:
+ numbered_to_accent
+ accent_to_numbered
+ (preserve whitespace, preserve caps, preserve punctuation,
+    preserve non-pinyin syllables?)
+"""
+
+exit()
+""" DEPRECATED OLD VERSIONS BELOW HERE """
+""" DEPRECATED OLD VERSIONS BELOW HERE """
+""" DEPRECATED OLD VERSIONS BELOW HERE """
+""" DEPRECATED OLD VERSIONS BELOW HERE """
 
 
 """
@@ -164,39 +339,6 @@ test_function = normalize_pinyin
 for t in tests:
     print(f"{t}: |{test_function(t)}|, trimmed: |"
           + f"{test_function(t, trim=True)}|")
-exit()
-"""
-
-
-def is_valid_pinyin_syllable(syllable,
-                             allow_numbered=True,
-                             allow_toneless=True,
-                             allow_erhua=True,
-                             normalize=True):
-    '''Returns true if syllable is valid pinyin.
-
-    Currently checks against valid syllables list, with or without
-    appended 'r' for erhua and/or number for numbered tones.
-    '''
-    if normalize:
-        syllable = normalize_pinyin(syllable.lower())
-    valid = False
-    if syllable in valid_pinyin_syllables:
-        valid = True
-    elif (syllable[:-1] in valid_pinyin_syllables
-          and syllable[-1] in ['0', '1', '2', '3', '4', '5', 'r']):
-        valid = True
-    elif (syllable[:-2] in valid_pinyin_syllables
-          and syllable[-2:] in ['r0', 'r1', 'r2', 'r3', 'r4', 'r5']):
-        valid = True
-    return valid
-
-
-"""
-test_function = is_valid_pinyin_syllable
-for t in tests:
-    print(f'''{t}: {test_function(t)}, no normalize:''' +
-          f'''{test_function(t, normalize=False)}''')
 exit()
 """
 
@@ -230,51 +372,6 @@ test_function = number_pinyin
 for t in tests:
     if is_valid_pinyin_syllable(t):
         print(f"{t}: {test_function(t)}")
-exit()
-"""
-
-
-def first_pinyin_syllable(syllables_string, trim=True):
-    """Returns first syllable of valid accented pinyin
-
-    longest pinyin syllable might be: shuangr3"""
-
-    if trim:
-        tmp_syl_str = syllables_string
-        while (tmp_syl_str[0].lower() not in "".join(initials) +
-               "".join(finals) + "".join(vowels_with_tones)):
-            tmp_syl_str = tmp_syl_str[1:]
-        syllables_string = tmp_syl_str
-
-    outstr = None
-    for syl_len in range(8, 0, -1):
-        test_str = syllables_string[:syl_len]
-        if is_valid_pinyin_syllable(test_str):
-            outstr = test_str
-            break
-    return outstr
-
-
-"""
-test_function = first_pinyin_syllable
-for t in tests:
-    print(f'''{t}: |{test_function(t)}|, notrim: |{test_function(t,
-          trim=False)}|''')
-exit()
-"""
-
-
-def rest_of_string(syllables_string):
-    start_index = syllables_string.find(first_pinyin_syllable(syllables_string))
-    str_len = len(first_pinyin_syllable(syllables_string))
-    index = start_index + str_len
-    return syllables_string[index:]
-
-
-"""
-test_function = rest_of_string
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
 exit()
 """
 
@@ -345,7 +442,9 @@ exit()
 """
 
 
-def longest_initial_valid_pinyin_syllable(syllables_string):
+def initial_pinyin_syllable(syllables_string):
+    """Returns longest valid pinyin syllable from beginning of string"""
+
     final_idx = None
     for idx in range(7, 0, -1):
         test_str = normalize_pinyin(syllables_string[:idx])
@@ -362,25 +461,25 @@ def longest_initial_valid_pinyin_syllable(syllables_string):
         if len(syllables_string) > final_idx:
             if syllables_string[final_idx] in "012345":
                 final_idx += 1
-                syllable = syllables_string[:final_idx]        
+                syllable = syllables_string[:final_idx]
     return syllable
 
 
 """
-test_function = longest_initial_valid_pinyin_syllable
+test_function = initial_pinyin_syllable
 for t in tests:
     print(f"{t}: |{test_function(t)}|")
 exit()
 """
 
 
-def first_valid_pinyin_syllable(syllables_string):
+def find_pinyin_syllable(syllables_string):
     """Aggressively drops initial characters until it finds valid pinyin
 
     """
     first = None
     for idx in range(len(syllables_string)):
-        tmp = longest_initial_valid_pinyin_syllable(syllables_string[idx:])
+        tmp = initial_pinyin_syllable(syllables_string[idx:])
         if tmp:
             first = tmp
             break
@@ -388,7 +487,7 @@ def first_valid_pinyin_syllable(syllables_string):
 
 
 """
-test_function = first_valid_pinyin_syllable
+test_function = find_pinyin_syllable
 for t in tests:
     print(f"{t}: |{test_function(t)}|")
 exit()
@@ -402,7 +501,7 @@ def first_valid_pinyin_index(syllables_string):
     first = None
     start_idx = None
     for idx in range(len(syllables_string)):
-        tmp = longest_initial_valid_pinyin_syllable(syllables_string[idx:])
+        tmp = initial_pinyin_syllable(syllables_string[idx:])
         if tmp:
             first = tmp
             start_idx = idx
@@ -444,6 +543,7 @@ def split_pinyin_syllables(syllables):
             idxs.append(len(syllables))
     return idxs
 
+
 """
 tests = [
     "Tiān​'ān​mén",
@@ -481,23 +581,4 @@ test_function = accent_pinyin_syllables
 for t in tests:
     print(f"{t}: |{test_function(t)}|")
 exit()
-"""
-
-cases = """倒
-安靜
-安排
-爸爸""".split()
-
-for c in cases:
-    trad, simp, pinyin, definition = cedict[c]
-    if trad != simp:
-        print(f"{simp} ({trad})|{pinyin}|{definition}")
-    else:
-        print(f"{trad}|{pinyin}|{definition}")
-
-""" # restore if accent_pinyin_syllables() fixed
-    if trad != simp:
-        print(f"{simp} ({trad})|{accent_pinyin_syllables(pinyin)}|{definition}")
-    else:
-        print(f"{trad}|{accent_pinyin_syllables(pinyin)}|{definition}")
 """
