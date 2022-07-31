@@ -20,6 +20,7 @@ write_to_file = True
 # just load the whole dictionary to memory
 cedict = {}
 location = ".//cedict_1_0_ts_utf-8_mdbg.txt"
+
 with open(location, "rt") as cedict_file:
     replace_separator = ("|", "/")  # or None
     # SEPARATOR COLLISIONS
@@ -78,6 +79,21 @@ cases = """倒
 劲
 """.split()
 
+with open(".//HSK-wordlists/HSK2.1.tsv", "rt") as cases_file:
+    cases = []
+    for l in cases_file.readlines():
+        tab_idx = l.find("\t")
+        case = ""
+        if tab_idx != -1:
+            case = l[:tab_idx]
+        slash_idx = case.find("/")
+        if slash_idx != -1:
+            case = case[:slash_idx]
+        if case != "":
+            cases.append(case)
+# TODO currently breaks on the wordlist grammar points, like
+# 除了…以外 \t chúle...yǐwài
+
 
 # Pinyin validation and manipulation
 
@@ -92,6 +108,7 @@ tests = [
     "ni3",  # simple numbered syllable
     "feng1 li4",  # two numbered syllables with space
     "feng1li4",  # two numbered syllables without space
+    "dong1 xi5",  # two numbered with final unmarked
     "Ni3",  # initial cap
     "Bā",  # initial cap accented
     "Ma",  # initial cap unaccented
@@ -395,8 +412,24 @@ def word_to_card(word, sep="|"):
     characters|pinyin|definition
     that can be turned into an Anki deck
     """
-    trad, simp, pinyin, definition = cedict[c]
-    pinyin = mdbg_to_marked(pinyin)
+    try:
+        trad, simp, pinyin, definition = cedict[c]
+    except KeyError:
+        trad, simp, pinyin, definition = c, c, "", "ERROR NOT IN CEDICT"
+    # pinyin = mdbg_to_marked(pinyin)
+
+    # TODO: make this less ugly
+    # currently it's compensating for the way I smash entries together when
+    # loading cedict
+    if ";" in pinyin:
+        pinyin_semi_split = pinyin.split(';')
+        pinyin_semi = ""
+        for p in pinyin_semi_split:
+            pinyin_semi += mdbg_to_marked(p)
+            pinyin_semi += ';'
+        pinyin = pinyin_semi[:-1]
+    else:
+        pinyin = mdbg_to_marked(pinyin)
     # SEPARATOR COLLISIONS
     # mdbg definitions can include /|;, making separators hard
     # you can choose an alternate separator here, like "\\"
@@ -413,6 +446,8 @@ def word_to_card(word, sep="|"):
         retval = (f"{trad}{sep}{pinyin}{sep}{definition}")
     return retval
 
+
+#  TODO remove tests = ["dong1 xi5", "dong1 xi1"]  # two numbered with final unmarked
 
 if RUN_TESTS:
     test_function = mdbg_to_marked
