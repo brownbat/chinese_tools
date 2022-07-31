@@ -394,22 +394,15 @@ MODEL TO IMPLEMENT:
 
 1. split string into first pinyin + tail, or junk leading chars + tail
 
-is_valid_numbered_pinyin_string
-# should we ignore whitespace, punctuation, caps?
-# implement strict first
-is_valid_accented_pinyin_string
-is_valid_pinyin_string
-
-
 split_pinyin_syllables
 # split out nonpinyin letters into separate clusters?
-# strip them?
-# fail early
+# or strip them?
+
 combine_pinyin_syllables
 # add apostrophes appropriately
 
 string:
- numbered_to_accent
+ numbered_to_accent (for non-mdbg?)
  accent_to_numbered
  (preserve whitespace, preserve caps, preserve punctuation,
     preserve non-pinyin syllables?)
