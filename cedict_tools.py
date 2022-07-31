@@ -15,12 +15,32 @@ https://en.wikibooks.org/wiki/Chinese_(Mandarin)/Table_of_Initial-Final_Combinat
 # chinese SAT?
 
 RUN_TESTS = False
-
+write_to_file = True
 
 # just load the whole dictionary to memory
 cedict = {}
 location = ".//cedict_1_0_ts_utf-8_mdbg.txt"
 with open(location, "rt") as cedict_file:
+    replace_separator = ("|", "/")  # or None
+    # SEPARATOR COLLISIONS
+    # mdbg definitions can include /|;, making separators for Anki cards hard
+    # you can choose an alternate separator below, in word_to_card(), like "\\"
+    # or "\t"
+    # or you can replace all the "|" occurrences in the dictionary on load
+    # here -- "|" appears when dictionary entires reference other entries,
+    # and is used to separate simplified|traditional in those links to other
+    # entries. I recommend replacing "|" with "/" on load, like the sep for
+    # alternate definitions
+
+    # mdbg format is:
+    #   TRAD SIMP [pin1 yin1] /def1/def2
+    # in cases where the same word changes meaning with different tones,
+    #   such as 倒 dao3 to fall; dao4 to invert, pour
+    # mdbg will have two separate entries -- the pinyin helps distinguish
+    # entries
+    # the loading system below will combine these into one entry, with a
+    # semicolon separating the pinyin, and a semicolon separating those defs
+
     for l in cedict_file.readlines():
         if l[0] == "#":
             pass
@@ -30,7 +50,8 @@ with open(location, "rt") as cedict_file:
             trad, simp = trad_simp.split()
             pinyin, definition = pinyin_definition.split("]", 1)
             definition = definition[2:-2]
-            definition = definition.replace('|', '/')
+            if replace_separator or False:  # cast to T/F with None to False
+                definition = definition.replace(*replace_separator)
             entry = [trad, simp, pinyin, definition]
             if trad not in cedict:
                 cedict[trad] = entry
@@ -45,12 +66,17 @@ with open(location, "rt") as cedict_file:
                 cedict[simp] = entry
 
 
-# wordlist to bsv scratchpad - values separated by |
+# wordlist to bar-separated-values bsv scratchpad - values separated by |
 # one challenge in making delimiters -- cedict uses |,;. but not \t or \
 cases = """倒
 安靜
 安排
-爸爸""".split()
+爸爸
+一個勁兒
+一个劲儿
+一个劲
+劲
+""".split()
 
 
 # Pinyin validation and manipulation
@@ -269,6 +295,7 @@ def first_pinyin_syllable(pinyin_string):
     else:
         return pinyin_string[:syl_len]
 
+
 def find_first_pinyin(pinyin_string):
     for start_idx in range(len(pinyin_string)):
         test_syl = first_pinyin_syllable(pinyin_string[start_idx:])
@@ -277,7 +304,7 @@ def find_first_pinyin(pinyin_string):
         else:
             return test_syl
     return None
-    
+
 
 def strip_pinyin(syl):
     """
@@ -299,7 +326,7 @@ def strip_pinyin(syl):
         tmp_len = first_pinyin_syllable_length(out_syl[idx:])
         if tmp_len is not None:
             return(out_syl[idx:idx+tmp_len])
-            # this only does one syllable            
+            # this only does one syllable
     return out_syl
 
 
@@ -327,12 +354,12 @@ def numbered_to_marked(syl):
     # TODO test
     retval = None
 
-    tone_dictionary = {"a":"āáǎàa",
-                       "e":"ēéěèe",
-                       "i":"īíǐìi",
-                       "o":"ōóǒòo",
-                       "u":"ūúǔùu",
-                       "ü":"ǖǘǚǜü"}
+    tone_dictionary = {"a": "āáǎàa",
+                       "e": "ēéěèe",
+                       "i": "īíǐìi",
+                       "o": "ōóǒòo",
+                       "u": "ūúǔùu",
+                       "ü": "ǖǘǚǜü"}
     if is_valid_numbered_pinyin_syllable(syl):
         if syl == "r5":
             retval = "r"
@@ -370,10 +397,20 @@ def word_to_card(word, sep="|"):
     """
     trad, simp, pinyin, definition = cedict[c]
     pinyin = mdbg_to_marked(pinyin)
+    # SEPARATOR COLLISIONS
+    # mdbg definitions can include /|;, making separators hard
+    # you can choose an alternate separator here, like "\\"
+    # or "\t"
+    # or you can replace all the "|" occurrences in the dictionary on load
+    # above -- "|" appears when dictionary entires reference other entries,
+    # and is used to separate simplified|traditional in those links to other
+    # entries. I recommend replacing those with "/" to match alternate
+    # definitions
+    sep = "|"
     if trad != simp:
-        retval = f"{simp} ({trad})|{pinyin}|{definition}"
+        retval = f"{simp} ({trad}){sep}{pinyin}{sep}{definition}"
     else:
-        retval = (f"{trad}|{pinyin}|{definition}")
+        retval = (f"{trad}{sep}{pinyin}{sep}{definition}")
     return retval
 
 
@@ -385,8 +422,14 @@ if RUN_TESTS:
     exit()
 
 
-for c in cases:
-    print(word_to_card(c))
+if write_to_file:
+    with open(".//outfile.bsv", "w") as output_file:
+        for c in cases:
+            output_file.write(word_to_card(c))
+            output_file.write("\n")
+else:
+    for c in cases:
+        print(word_to_card(c))
 
 
 """
@@ -407,4 +450,3 @@ string:
  (preserve whitespace, preserve caps, preserve punctuation,
     preserve non-pinyin syllables?)
 """
-
