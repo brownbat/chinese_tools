@@ -14,14 +14,30 @@ https://en.wikibooks.org/wiki/Chinese_(Mandarin)/Table_of_Initial-Final_Combinat
 # note TOCFL wordlists: https://www.tw.org/tocfl/index.html
 # chinese SAT?
 
+# current input file formats
+# DONE
+# HSK 2: simp<tab>pinyin<tab>def
+
+# NORMALIZE
+# all have marked pinyin, maybe use that?
+# HSK 1 file format: trad/simp<tab>marked pinyin
+# HSK 3.1-6: simp<tab>pinyin<tab>source
+# HSK 3.7+ : simp<tab>pinyin
+# missing words: simp<tab>trad<tab>pinyin<tab>def<tab>simp: mdbg def<tab>source
+
+# find and remove overlaps
+
 RUN_TESTS = False
 write_to_file = True
 
 # just load the whole dictionary to memory
 cedict = {}
-location = ".//cedict_1_0_ts_utf-8_mdbg.txt"
+cedict_filename = ".//cedict_1_0_ts_utf-8_mdbg.txt"
+wordlist_filename = ".//HSK-wordlists/HSK2.1.tsv"
+outfile_filename = ".//outfile.bsv"
 
-with open(location, "rt") as cedict_file:
+
+with open(cedict_filename, "rt") as cedict_file:
     replace_separator = ("|", "/")  # or None
     # SEPARATOR COLLISIONS
     # mdbg definitions can include /|;, making separators for Anki cards hard
@@ -69,6 +85,8 @@ with open(location, "rt") as cedict_file:
 
 # wordlist to bar-separated-values bsv scratchpad - values separated by |
 # one challenge in making delimiters -- cedict uses |,;. but not \t or \
+
+# hard code cases like so
 cases = """倒
 安靜
 安排
@@ -79,9 +97,14 @@ cases = """倒
 劲
 """.split()
 
-with open(".//HSK-wordlists/HSK2.1.tsv", "rt") as cases_file:
+# or use some file
+with open(wordlist_filename, "rt") as cases_file:
     cases = []
     for l in cases_file.readlines():
+        # TODO currently manually processes the wordlist based on HSK
+        # wordlist format, stripping info past tabs and semicolons
+        # far better would be to (a) take in a regex mask of some kind, or
+        # (b) just demand files are well formatted 
         tab_idx = l.find("\t")
         case = ""
         if tab_idx != -1:
@@ -447,8 +470,6 @@ def word_to_card(word, sep="|"):
     return retval
 
 
-#  TODO remove tests = ["dong1 xi5", "dong1 xi1"]  # two numbered with final unmarked
-
 if RUN_TESTS:
     test_function = mdbg_to_marked
     print(f"\nTesting {test_function.__name__}()")
@@ -458,7 +479,7 @@ if RUN_TESTS:
 
 
 if write_to_file:
-    with open(".//outfile.bsv", "w") as output_file:
+    with open(outfile_filename, "w") as output_file:
         for c in cases:
             output_file.write(word_to_card(c))
             output_file.write("\n")
