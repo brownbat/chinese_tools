@@ -11,6 +11,9 @@ https://en.wikibooks.org/wiki/Chinese_(Mandarin)/Table_of_Initial-Final_Combinat
 # Secondary goals
 #   validate and manipulate pinyin strings between accented and unaccented
 
+# note TOCFL wordlists: https://www.tw.org/tocfl/index.html
+# chinese SAT?
+
 
 # just load the whole dictionary to memory
 cedict = {}
@@ -155,6 +158,7 @@ valid_pinyin_syllables = [
 
 vowels_with_tones = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
 tones_upper = "ĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ"
+# traditionally pinyin uses the aeoiu order
 
 initials = [
     "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "zh",
@@ -267,19 +271,37 @@ def first_pinyin_syllable_length(pinyin_string):
     return None
 
 
-test_function = first_pinyin_syllable_length
-print(f"Testing {test_function.__name__}()")
-for t in tests:
-    print(f"{t}: {test_function(t)}")
-exit()
-# inf if short syl
-# shuangr3
+def find_first_pinyin(pinyin_string):
+    # gets too small ones, you want the longest possible first syl 
+    for start_idx in range(len(pinyin_string)):
+        for end_idx in range(start_idx + 1, start_idx + 8):
+            if is_valid_pinyin_syllable(pinyin_string[start_idx:end_idx]):
+               return pinyin_string[start_idx:end_idx]
+    return None
+    
 
+def strip_pinyin(syl, aggressive=True):
+    """
+    Remove tone, remove punctuation, lowercase
+    """
+    test_syl = syl.lower()
+    tone_vowels = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
+    vowels_mask = "aaaaeeeeiiiioooouuuuüüüü"
+    out_syl = ""
+    for l in test_syl:
+        if l in "abcdefghijklmnopqrstuüvwxyz ":
+            out_syl += l
+        elif l in tone_vowels:
+            out_syl += vowels_mask[tone_vowels.find(l)]
+    # TODO: if aggressive, strip to first longest valid pinyin syllable
+    out_str = ""
+    for idx in range(len(out_syl)):
+        tmp_len = first_pinyin_syllable_length(out_syl[idx:])
+        if tmp_len is not None:
+            return(out_syl[idx:idx+tmp_len])
+            # this only does one syllable            
+    return out_syl
 
-"""
-MODEL TO IMPLEMENT:
-
-def strip_pinyin() # remove tone, simplify, lowercase -- implemented below?
 
 def proper_tone_idx(syl):
     test_syl = strip_pinyin(syl)
@@ -292,6 +314,36 @@ def proper_tone_idx(syl):
     else:
         proper_tone_idx = last_vowel_idx(test_syl)
     return proper_tone_idx
+
+
+def mdbg_to_marked(mdbg_pinyin):
+    mdbg_syls = mdbg_pinyin.split()
+    outstr = ""
+    for syl in mdbg_syls:
+        if is_valid_numbered_pinyin(syl):
+            outstr += numbered_to_marked(syl)
+        else:
+            outstr += syl
+    return outstr
+
+
+# tests = ["xmnma"]
+test_function = find_first_pinyin
+print(f"\nTesting {test_function.__name__}()")
+for t in tests:
+    print(f"{t}: {test_function(t)}")
+exit()
+
+
+"""
+MODEL TO IMPLEMENT:
+
+1. split
+2. is numbered pinyin syllable
+    3. yes - convert to 
+    4. no - convert to 
+
+def find_first_pinyin(syl):
 
 
 def number_to_accent_syl(syl):
