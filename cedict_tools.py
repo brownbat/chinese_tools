@@ -183,6 +183,8 @@ finals = [
 def is_valid_numbered_pinyin_syllable(syl, allow_erhua=True):
     """
     Determines if syl is a valid numbered pinyin syllable
+
+    TODO: retest
     """
     valid = False
     if (syl[:-1].lower() in valid_pinyin_syllables) and (
@@ -197,7 +199,7 @@ def is_valid_numbered_pinyin_syllable(syl, allow_erhua=True):
 
 def last_vowel_idx(syl):
     for idx in range(len(syl)-1, -1, -1):
-        if syl[idx] in "aeiouü":
+        if syl[idx] in "aeiouü" + vowels_with_tones:
             return idx
     return None
 
@@ -271,18 +273,28 @@ def first_pinyin_syllable_length(pinyin_string):
     return None
 
 
+def first_pinyin_syllable(pinyin_string):
+    syl_len = first_pinyin_syllable_length(pinyin_string)
+    if syl_len is None:
+        return None
+    else:
+        return pinyin_string[:syl_len]
+
 def find_first_pinyin(pinyin_string):
-    # gets too small ones, you want the longest possible first syl 
     for start_idx in range(len(pinyin_string)):
-        for end_idx in range(start_idx + 1, start_idx + 8):
-            if is_valid_pinyin_syllable(pinyin_string[start_idx:end_idx]):
-               return pinyin_string[start_idx:end_idx]
+        test_syl = first_pinyin_syllable(pinyin_string[start_idx:])
+        if test_syl is None:
+            pass
+        else:
+            return test_syl
     return None
     
 
-def strip_pinyin(syl, aggressive=True):
+def strip_pinyin(syl):
     """
     Remove tone, remove punctuation, lowercase
+
+    TODO: Currently just grabs first syllable, do for full stream
     """
     test_syl = syl.lower()
     tone_vowels = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
@@ -293,7 +305,6 @@ def strip_pinyin(syl, aggressive=True):
             out_syl += l
         elif l in tone_vowels:
             out_syl += vowels_mask[tone_vowels.find(l)]
-    # TODO: if aggressive, strip to first longest valid pinyin syllable
     out_str = ""
     for idx in range(len(out_syl)):
         tmp_len = first_pinyin_syllable_length(out_syl[idx:])
@@ -304,31 +315,66 @@ def strip_pinyin(syl, aggressive=True):
 
 
 def proper_tone_idx(syl):
+    # finds the index of where the accent mark goes
+    # note if strip_pinyin ever strips a, e, ou - it could cause a subtle bug
+    # this would be more stable if it clearly identified how much was stripped
+    # and indexed from there
     test_syl = strip_pinyin(syl)
     if "a" in test_syl:
-        proper_tone_idx = test_syl.find("a")
+        proper_tone_idx = syl.find("a")
     elif "e" in test_syl:
-        proper_tone_idx = test_syl.find("e")
+        proper_tone_idx = syl.find("e")
     elif "ou" in test_syl:
-        proper_tone_idx = test_syl.find("o")
+        proper_tone_idx = syl.find("o")
     else:
         proper_tone_idx = last_vowel_idx(test_syl)
     return proper_tone_idx
 
 
-def mdbg_to_marked(mdbg_pinyin):
+def numbered_to_marked(syl):
+    # TODO lookup marked letter in vowels_with_tones
+    # currently failing to even find all valid numbered pinyin syllables?
+    # probably b/c that replies false if multiple syllables
+    # TODO test
+    retval = None
+
+    tone_dictionary = {"a":"āáǎàa",
+                       "e":"ēéěèe",
+                       "i":"īíǐìi",
+                       "o":"ōóǒòo",
+                       "u":"ūúǔùu",
+                       "ü":"ǖǘǚǜü"}
+    if is_valid_numbered_pinyin_syllable(syl):
+        if syl == "r5":
+            retval = "r"
+        else:
+            tone = int(syl[-1])-1
+            pti = proper_tone_idx(syl)
+            tone_letter = syl[pti]
+            if tone == 5:
+                accented_letter = tone_letter
+            else:
+                accented_letter = tone_dictionary[tone_letter][tone]
+            retval = syl.replace(tone_letter, accented_letter)[:-1]
+    return retval
+
+
+def mdbg_to_marked(mdbg_pinyin, remove_spaces=True):
+    # TODO fails on feng1li4 b/c no space between feng1 and li4
+    # mdbg adds spaces between pinyin syllables though so is this ok?
     mdbg_syls = mdbg_pinyin.split()
     outstr = ""
     for syl in mdbg_syls:
-        if is_valid_numbered_pinyin(syl):
+        if is_valid_numbered_pinyin_syllable(syl):
             outstr += numbered_to_marked(syl)
         else:
             outstr += syl
+        if not remove_spaces:
+            outstr += " "
     return outstr
 
 
-# tests = ["xmnma"]
-test_function = find_first_pinyin
+test_function = mdbg_to_marked
 print(f"\nTesting {test_function.__name__}()")
 for t in tests:
     print(f"{t}: {test_function(t)}")
@@ -338,25 +384,7 @@ exit()
 """
 MODEL TO IMPLEMENT:
 
-1. split
-2. is numbered pinyin syllable
-    3. yes - convert to 
-    4. no - convert to 
-
-def find_first_pinyin(syl):
-
-
-def number_to_accent_syl(syl):
-    retval = None
-    if is_valid_numbered_pinyin_syllable(syl):
-        tone = syl[-1]
-        proper_tone_idx(syl)
-        tone_letter = syl[proper_tone_idx]
-
-
-def accent_to_number_syl(syl):
-  pass
-
+1. split string into first pinyin + tail, or junk leading chars + tail
 
 is_valid_numbered_pinyin_string
 # should we ignore whitespace, punctuation, caps?
@@ -379,258 +407,3 @@ string:
     preserve non-pinyin syllables?)
 """
 
-exit()
-""" DEPRECATED OLD VERSIONS BELOW HERE """
-""" DEPRECATED OLD VERSIONS BELOW HERE """
-""" DEPRECATED OLD VERSIONS BELOW HERE """
-""" DEPRECATED OLD VERSIONS BELOW HERE """
-
-
-"""
-test_function = normalize_pinyin
-for t in tests:
-    print(f"{t}: |{test_function(t)}|, trimmed: |"
-          + f"{test_function(t, trim=True)}|")
-exit()
-"""
-
-
-def number_pinyin(syllable):
-    '''Convert accented pinyin syllable to numbered pinyin.
-
-    Currently discards extra junk characters, punctuation, spaces.
-    TODO: Optionally keep and correctly place other characters.
-    '''
-
-    outstr = ""
-    tone = 5
-    for letter in syllable:
-        if letter.lower() in vowels_with_tones:
-            vowels_index = vowels_with_tones.find(letter.lower())
-            new_vowel = "aeiouü"[vowels_index // 4]
-            outstr += new_vowel
-            tone = vowels_index % 4 + 1
-        else:
-            outstr += letter
-    outstr = normalize_pinyin(outstr)
-    assert is_valid_pinyin_syllable(outstr), (
-        f"""outstr "{outstr}" not valid pinyin""")
-    outstr += str(tone)
-    return outstr
-
-
-"""
-test_function = number_pinyin
-for t in tests:
-    if is_valid_pinyin_syllable(t):
-        print(f"{t}: {test_function(t)}")
-exit()
-"""
-
-
-def is_valid_numbered_pinyin(syllable, strict=False):
-    valid = is_valid_pinyin_syllable(syllable, normalize=False)
-    if strict:
-        valid = valid and syllable[-1] in "12345"
-    return valid
-
-
-"""
-test_function = is_valid_numbered_pinyin
-for t in tests:
-    print(f"{t}: {test_function(t)}, strict:" +
-          f"{test_function(t, strict=True)}")
-exit()
-"""
-
-
-def accent_pinyin_syllable(syllable):
-    '''Converts numbered pinyin syllable to accented
-
-    e.g., 'xia3' to 'xiǎ'
-
-    Rules:
-    1. accent a or e
-    2. accent o in ou
-    3. in all other cases, accent the final vowel'''
-
-    vowels_with_tones = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
-    syllable = syllable.lower().strip()
-    if syllable[-1] in "1234":
-        tone = int(syllable[-1])
-    elif syllable[-1] in "05":
-        tone = 5
-        syllable = syllable[:-1]
-    else:
-        # unaccented syllable
-        tone = 5
-
-    if "a" in syllable:
-        index = syllable.find("a")
-    elif "e" in syllable:
-        index = syllable.find("e")
-    elif "ou" in syllable:
-        index = syllable.find("ou")
-    elif syllable[-2] in "nr":
-        index = len(syllable) - 3
-    elif syllable[-2] == "g":
-        index = len(syllable) - 4
-    else:
-        index = len(syllable) - 2
-
-    if str(tone) in "1234":
-        tone_index = "aeiouü".find(syllable[index]) * 4 + tone - 1
-        new_vowel = vowels_with_tones[tone_index]
-        syllable = syllable[:index] + new_vowel + syllable[index+1:-1]
-    return syllable
-
-
-"""
-test_function = accent_pinyin_syllable
-for t in tests:
-    if is_valid_numbered_pinyin(t):
-        print(f"{t}: |{test_function(t)}|")
-exit()
-"""
-
-
-def initial_pinyin_syllable(syllables_string):
-    """Returns longest valid pinyin syllable from beginning of string"""
-
-    final_idx = None
-    for idx in range(7, 0, -1):
-        test_str = normalize_pinyin(syllables_string[:idx])
-        if test_str in valid_pinyin_syllables:
-            final_idx = idx
-            break
-    syllable = None
-    if final_idx:
-        syllable = syllables_string[:final_idx]
-        if len(syllables_string) > final_idx:
-            if syllables_string[final_idx] == "r":
-                syllable += "r"
-                final_idx += 1
-        if len(syllables_string) > final_idx:
-            if syllables_string[final_idx] in "012345":
-                final_idx += 1
-                syllable = syllables_string[:final_idx]
-    return syllable
-
-
-"""
-test_function = initial_pinyin_syllable
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
-exit()
-"""
-
-
-def find_pinyin_syllable(syllables_string):
-    """Aggressively drops initial characters until it finds valid pinyin
-
-    """
-    first = None
-    for idx in range(len(syllables_string)):
-        tmp = initial_pinyin_syllable(syllables_string[idx:])
-        if tmp:
-            first = tmp
-            break
-    return first
-
-
-"""
-test_function = find_pinyin_syllable
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
-exit()
-"""
-
-
-def first_valid_pinyin_index(syllables_string):
-    """Aggressively drops initial characters until it finds valid pinyin
-
-    """
-    first = None
-    start_idx = None
-    for idx in range(len(syllables_string)):
-        tmp = initial_pinyin_syllable(syllables_string[idx:])
-        if tmp:
-            first = tmp
-            start_idx = idx
-            break
-    if first:
-        final_idx = start_idx + len(first)
-        if len(syllables_string) > final_idx:
-            if syllables_string[final_idx] == "r":
-                final_idx += 1
-        if len(syllables_string) > final_idx:
-            if syllables_string[final_idx] in "012345":
-                final_idx += 1
-        return [start_idx, final_idx]
-    else:
-        return None
-
-
-"""
-test_function = first_valid_pinyin_index
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
-exit()
-"""
-
-
-def split_pinyin_syllables(syllables):
-    """
-    Split string into list of substrings that are valid pinyin or not
-    TODO: Currently hopelessly broken
-    """
-    idxs = first_valid_pinyin_index(syllables)
-    while idxs[-1] < len(syllables):
-        print(syllables[idxs[-1]])
-        input()
-        tmp_idxs = first_valid_pinyin_index(syllables[idxs[-1]])
-        if tmp_idxs:
-            idxs.extend([_ + idxs[-1] for _ in tmp_idxs])
-        else:
-            idxs.append(len(syllables))
-    return idxs
-
-
-"""
-tests = [
-    "Tiān​'ān​mén",
-    "Tiān'ānmén",
-    "'ān​mén",
-    "'ānmén",
-    "ān​mén",
-    "ānmén"
-]
-
-
-test_function = split_pinyin_syllables
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
-exit()
-
-
-def accent_pinyin_syllables(syllables):
-    outstr = ""
-    for s in split_pinyin_syllables(syllables):
-        if is_valid_pinyin(s):
-            outstr += accent_pinyin_syllable(s)
-        elif s in ",; ":
-            outstr += s
-        else:
-            print(syllables)
-            print(split_pinyin_syllables(syllables))
-            print(f"{s} is not valid pinyin, cannot accent it")
-            assert False
-    outstr.strip()
-    return outstr
-
-
-test_function = accent_pinyin_syllables
-for t in tests:
-    print(f"{t}: |{test_function(t)}|")
-exit()
-"""
