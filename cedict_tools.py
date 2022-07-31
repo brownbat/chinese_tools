@@ -14,6 +14,8 @@ https://en.wikibooks.org/wiki/Chinese_(Mandarin)/Table_of_Initial-Final_Combinat
 # note TOCFL wordlists: https://www.tw.org/tocfl/index.html
 # chinese SAT?
 
+RUN_TESTS = False
+
 
 # just load the whole dictionary to memory
 cedict = {}
@@ -44,24 +46,11 @@ with open(location, "rt") as cedict_file:
 
 
 # wordlist to bsv scratchpad - values separated by |
+# one challenge in making delimiters -- cedict uses |,;. but not \t or \
 cases = """倒
 安靜
 安排
 爸爸""".split()
-
-for c in cases:
-    trad, simp, pinyin, definition = cedict[c]
-    if trad != simp:
-        print(f"{simp} ({trad})|{pinyin}|{definition}")
-    else:
-        print(f"{trad}|{pinyin}|{definition}")
-
-""" # restore if accent_pinyin_syllables() fixed
-    if trad != simp:
-        print(f"{simp} ({trad})|{accent_pinyin_syllables(pinyin)}|{definition}")
-    else:
-        print(f"{trad}|{accent_pinyin_syllables(pinyin)}|{definition}")
-"""
 
 
 # Pinyin validation and manipulation
@@ -374,11 +363,30 @@ def mdbg_to_marked(mdbg_pinyin, remove_spaces=True):
     return outstr
 
 
-test_function = mdbg_to_marked
-print(f"\nTesting {test_function.__name__}()")
-for t in tests:
-    print(f"{t}: {test_function(t)}")
-exit()
+def word_to_card(word, sep="|"):
+    """Takes a Chinese word and returns a separated line of
+    characters|pinyin|definition
+    that can be turned into an Anki deck
+    """
+    trad, simp, pinyin, definition = cedict[c]
+    pinyin = mdbg_to_marked(pinyin)
+    if trad != simp:
+        retval = f"{simp} ({trad})|{pinyin}|{definition}"
+    else:
+        retval = (f"{trad}|{pinyin}|{definition}")
+    return retval
+
+
+if RUN_TESTS:
+    test_function = mdbg_to_marked
+    print(f"\nTesting {test_function.__name__}()")
+    for t in tests:
+        print(f"{t}: {test_function(t)}")
+    exit()
+
+
+for c in cases:
+    print(word_to_card(c))
 
 
 """
